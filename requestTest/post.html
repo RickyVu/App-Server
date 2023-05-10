@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<style>
+#url_input{
+    min-width:50%;
+    border: 3px solid greenyellow;
+}
+</style>
+</head>
+<datalist id="url_list">
+{% for url in url_list %}
+    <option value='{{ url }}'>{{ url }}</option>
+{% endfor %}  
+</datalist>
+<input id="url_input" type="search" list="url_list"><br>
+<textarea id="input"></textarea>
+<button onclick="a()">Submit</button>
+<h3>Post Result:</h3>
+<textarea id="output" readonly></textarea>
+
+<script>
+    function a(){
+        output = document.getElementById("output")
+        output.value = ''
+        data = JSON.parse(document.getElementById("input").value)
+        url_input = document.getElementById("url_input")
+        //console.log(JSON.stringify(data))
+        const headers = new Headers({
+            'X-CSRFToken': '{{ generated_csrf_token }}'
+        });
+
+        fetch('http://localhost:8000/' + url_input.value, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            contentType: 'application/json',
+            body: JSON.stringify(data)
+        }).then((response) => response.json()).then((data) => output.value = JSON.stringify(data, null, 2));
+        
+
+        /*fetch('http://localhost:8000/api/search/promptSearchOptions/', {
+            method: 'POST',
+            headers:{
+            'Content-Type': 'application/x-www-form-urlencoded'
+            },    
+            body: new URLSearchParams({
+                "inputType": "gene","inputContent": "string"
+            })
+        });*/
+
+
+
+    }
+</script>
+</html>

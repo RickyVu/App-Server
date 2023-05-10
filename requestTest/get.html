@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#url_input{
+    min-width:50%;;
+    border: 1px solid greenyellow;
+}
+</style>
+</head>
+<datalist id="url_list">
+{% for url in url_list %}
+    <option value='{{ url }}'>{{ url }}</option>
+{% endfor %}  
+</datalist>
+<input id="url_input" type="search" list="url_list"><br>
+<button onclick="a()">GET DATA</button><br>
+<textarea id="output" readonly></textarea>
+
+<script>
+    function a(){
+        url_input = document.getElementById("url_input")
+        output = document.getElementById("output")
+        output.value = ''
+        fetch('http://localhost:8000/' + url_input.value, {
+            method: 'GET', // *GET, POST, PUT, DELETE, etc.
+            mode: 'cors', // no-cors, *cors, same-origin
+            cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+            credentials: 'same-origin', // include, *same-origin, omit
+            headers: {
+            'Content-Type': 'application/json'
+            // 'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            redirect: 'follow', // manual, *follow, error
+            referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+      }).then((response) => response.json()).then((data) => output.value = JSON.stringify(data, null, 2));
+    }
+</script>
+</html>
