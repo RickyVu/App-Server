@@ -4,9 +4,11 @@ from django.http import HttpResponse, JsonResponse
 from django.db.utils import IntegrityError
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from . import models
 import json
 
+@csrf_exempt
 def log_in(request):
     if request.method == 'POST':
         # Get the username and password from the request
@@ -25,17 +27,16 @@ def log_in(request):
                 csrf_token = csrf.get_token(request)
                 print(request.session, request.session.session_key)
                 request.session['csrf_token'] = csrf_token
-                return JsonResponse({'success': True, 'message': 'Login successful'})
+                return JsonResponse({'success': True, 'message': 'login successful'})
             else:
                 # Handle invalid login credentials
-                error_message = 'Invalid login credentials'
-                return JsonResponse({'success': False, 'message': error_message})
+                return JsonResponse({'success': False, 'message': 'invalid login credentials'})
         except (json.JSONDecodeError, KeyError) as e:
-            return JsonResponse({'success': False, 'message': 'Invalid request'})
+            return JsonResponse({'success': False, 'message': 'invalid request'})
     else:
-        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+        return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-
+@csrf_exempt
 def signup(request):
     if request.method == 'POST':
         # Get the username and password from the request
@@ -49,19 +50,19 @@ def signup(request):
             try:
                 user = models.MyUser.objects.create_user(username=username, password=password)
                 user.save()
-                return JsonResponse({'success': True, 'message': 'Signup successful'})
+                return JsonResponse({'success': True, 'message': 'signup successful'})
             except IntegrityError:
-                return JsonResponse({'Success': False, "message": 'Clashing unique fields'})
+                return JsonResponse({'success': False, "message": 'clashing unique fields'})
 
         except (json.JSONDecodeError, KeyError) as e:
-            return JsonResponse({'success': False, 'message': 'Invalid request'})
+            return JsonResponse({'success': False, 'message': 'invalid request'})
     else:
-        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
-    
+        return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
+
 def log_out(request):
     logout(request)
     print(request.session, request.session.session_key)
-    return JsonResponse({'success': True, 'message': 'Logout successful'})
+    return JsonResponse({'success': True, 'message': 'logout successful'})
 
 
 def getall(request):
@@ -86,7 +87,7 @@ def session_test(request):
             return JsonResponse({'logged_in':False, 'csrf_token': csrf_token, 'session_key': request.session.session_key, 'message': 'no session key'})
     else:
         return JsonResponse({'logged_in':False, 'csrf_token': csrf_token, 'session_key': request.session.session_key, 'message': 'not authenticated'})
-    
+
 @login_required
 def req_login(request):
     username = request.user.username
