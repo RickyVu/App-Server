@@ -8,7 +8,6 @@ from django.views.decorators.csrf import csrf_exempt
 from . import models
 import json
 
-@csrf_exempt
 def log_in(request):
     if request.method == 'POST':
         # Get the username and password from the request
@@ -25,7 +24,6 @@ def log_in(request):
                 # Log the user in
                 login(request, user)
                 csrf_token = csrf.get_token(request)
-                print(request.session, request.session.session_key)
                 request.session['csrf_token'] = csrf_token
                 return JsonResponse({'success': True, 'message': 'login successful'})
             else:
@@ -36,7 +34,6 @@ def log_in(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@csrf_exempt
 def signup(request):
     if request.method == 'POST':
         # Get the username and password from the request
