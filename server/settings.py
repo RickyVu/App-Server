@@ -80,9 +80,9 @@ WSGI_APPLICATION = "server.wsgi.application"
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_DOMAIN =  None
 SESSION_COOKIE_NAME = 'sessionid'
+
+CSRF_USE_SESSION = True
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

@@ -7,7 +7,8 @@
 >**/initiate**  
 >```
 >response: {
->   'csrf_token': '$csrf_token'
+    'success': true,
+>   'session_id': '$session_id'
 >}
 >```
 ><br>
@@ -22,7 +23,7 @@
 >```
 >response: {
 >   'success': true,
->   'message': 'Logout successful' 
+>   'message': 'logout successful' 
 >}
 >```
 ><br>
@@ -39,7 +40,7 @@
 >
 >response: {
 >   'success': true|false, 
->   'message': 'Login successful'|'Invalid login credentials'|'Invalid request'|'Method not allowed'
+>   'message': 'login successful'|'invalid login credentials'|'invalid request'|'method not allowed'
 >}
 >```
 ><br>
@@ -53,7 +54,7 @@
 >
 >response: {
 >   'success': true|false, 
->   'message': 'Signup successful'|'Clashing unique fields'|'Invalid request'|'Method not allowed'
+>   'message': 'signup successful'|'clashing unique fields'|'invalid request'|'method not allowed'
 >}
 >```
 ><br>
