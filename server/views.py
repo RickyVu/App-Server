@@ -5,4 +5,4 @@ def initiate(request):
     if not request.session.session_key:
         request.session.create()
     session_id = request.session.session_key
-    return JsonResponse({"session_id": session_id})
+    return JsonResponse({"success": True, "session_id": session_id})
