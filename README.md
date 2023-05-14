@@ -1,13 +1,19 @@
 **Backend code for android web development class**
 
 # API
-## initiate
----
+
 ### GET
->**/initiate**
+>**/get_session**
 >```
 >response: {
->   'session_id': '$session_id'
+>   'session_id': '$session_id',
+>   'session_expiry_date': $session expiry_date'
+>}
+>```
+>**/get_csrf**
+>```
+>response: {
+>   'csrf_token': $csrf_token
 >}
 >```
 ><br>
@@ -21,8 +27,15 @@
 >**/users/logout**
 >```
 >response: {
->   'success': true,
 >   'message': 'logout successful'
+>}
+>```
+><br>
+
+>**/users/reqlogin**
+>```
+>response: {
+>   'username': '$username'
 >}
 >```
 ><br>
@@ -53,11 +66,12 @@
 >
 >response: {
 >   'success': true|false,
->   'message': 'signup successful'|'clashing unique fields'|'invalid request'|'method not allowed'
+>   'message': 'signup successful'|'fields cannot be empty'|'clashing unique fields'|'invalid request'|'method not allowed'
 >}
 >```
 ><br>
 ---
+
 
 ## static
 ### GET

@@ -45,7 +45,7 @@ def signup(request):
             password = data['password']
 
             if username==None or password==None:
-                return JsonResponse({'success': False, "message": 'Fields cannot be empty'})
+                return JsonResponse({'success': False, "message": 'fields cannot be empty'})
             try:
                 user = models.MyUser.objects.create_user(username=username, password=password)
                 user.save()
