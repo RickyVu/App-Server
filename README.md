@@ -4,10 +4,9 @@
 ## initiate
 ---
 ### GET
->**/initiate**  
+>**/initiate**
 >```
 >response: {
-    'success': true,
 >   'session_id': '$session_id'
 >}
 >```
@@ -19,11 +18,11 @@
 ## users
 ---
 ### GET
->**/users/logout**  
+>**/users/logout**
 >```
 >response: {
 >   'success': true,
->   'message': 'logout successful' 
+>   'message': 'logout successful'
 >}
 >```
 ><br>
@@ -31,29 +30,29 @@
 <br>
 
 ### POST
->**/users/login**  
+>**/users/login**
 >```
 >request: {
 >   'username':'$username',
 >   'password':'$password'
->}  
+>}
 >
 >response: {
->   'success': true|false, 
+>   'success': true|false,
 >   'message': 'login successful'|'invalid login credentials'|'invalid request'|'method not allowed'
 >}
 >```
 ><br>
 
->**/users/signup**  
+>**/users/signup**
 >```
 >request: {
 >   'username':'$username',
 >   'password':'$password'
->}  
+>}
 >
 >response: {
->   'success': true|false, 
+>   'success': true|false,
 >   'message': 'signup successful'|'clashing unique fields'|'invalid request'|'method not allowed'
 >}
 >```
@@ -62,8 +61,8 @@
 
 ## static
 ### GET
->**/static/images/***  
+>**/static/images/***
 >response: $IMAGE
 
->**/static/videos/***  
+>**/static/videos/***
 >response: $VIDEO

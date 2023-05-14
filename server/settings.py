@@ -82,7 +82,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 SESSION_COOKIE_NAME = 'sessionid'
 
-CSRF_USE_SESSION = True
+CSRF_USE_SESSIONS = True
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

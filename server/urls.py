@@ -19,7 +19,8 @@ from django.urls import include, path
 from . import views
 
 urlpatterns = [
-    path("initiate/", views.initiate, name="initiate"),
+    path("get_session/", views.get_session_id, name="get_session_id"),
+    path("get_csrf/", views.get_csrf_token, name="get_csrf_token"),
     path("posts/", include("posts.urls")),
     path("users/", include("users.urls")),
     path("requestTest/", include("requestTest.urls")),

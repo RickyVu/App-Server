@@ -14,7 +14,7 @@ def log_in(request):
         try:
             # Get the JSON data from the request body
             data = json.loads(request.body)
-            # Extract the value of the "my_field" key
+
             username = data['username']
             password = data['password']
             # Authenticate the user
@@ -23,8 +23,8 @@ def log_in(request):
             if user is not None:
                 # Log the user in
                 login(request, user)
-                csrf_token = csrf.get_token(request)
-                request.session['csrf_token'] = csrf_token
+                #csrf_token = csrf.get_token(request)
+                #request.session['csrf_token'] = csrf_token
                 return JsonResponse({'success': True, 'message': 'login successful'})
             else:
                 # Handle invalid login credentials
@@ -40,10 +40,12 @@ def signup(request):
         try:
             # Get the JSON data from the request body
             data = json.loads(request.body)
-            # Extract the value of the "my_field" key
+
             username = data['username']
             password = data['password']
-            # Authenticate the user
+
+            if username==None or password==None:
+                return JsonResponse({'success': False, "message": 'Fields cannot be empty'})
             try:
                 user = models.MyUser.objects.create_user(username=username, password=password)
                 user.save()
@@ -59,7 +61,7 @@ def signup(request):
 def log_out(request):
     logout(request)
     print(request.session, request.session.session_key)
-    return JsonResponse({'success': True, 'message': 'logout successful'})
+    return JsonResponse({'message': 'logout successful'})
 
 
 def getall(request):
@@ -87,5 +89,6 @@ def session_test(request):
 
 @login_required
 def req_login(request):
+    print(request.user, dir(request.user))
     username = request.user.username
     return JsonResponse({"username": username})
