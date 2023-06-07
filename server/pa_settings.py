@@ -22,6 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-l&rp76kxpi+aboxdbrps@el@v7dx$sh9xnun%&v#zuq1ofnfay"
 
+PUSHY_API_KEY = "9929e7c264c3f59bddc16e57083ae0dde6038f257a37ce02c5a227d2fde43d29"
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -39,7 +41,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'corsheaders',
     "users",
+    "media",
     "posts",
+    "messaging",
     "requestTest",
 ]
 
@@ -62,7 +66,9 @@ TEMPLATES = [
         'DIRS': [
             BASE_DIR / "requestTest",
             BASE_DIR / "users",
-            BASE_DIR / "posts"
+            BASE_DIR / "posts",
+            BASE_DIR / "media",
+            BASE_DIR / "messaging",
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -89,8 +95,16 @@ CSRF_USE_SESSIONS = True
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'RickyVu$app-database',
+        'USER': 'RickyVu',
+        'PASSWORD': 'mysql1234',
+        'HOST': 'RickyVu.mysql.pythonanywhere-services.com',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': 'SET collation_connection = utf8mb4_unicode_ci',
+            'sql_mode': 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO',
+        },
     }
 }
 
@@ -115,6 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = [
     'users.backends.MyAuthBackend',
+    #'users.backends.UUIDBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 

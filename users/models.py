@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group, Permission
+#from media.models import Image
+import uuid
 
 class MyUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
@@ -17,11 +19,12 @@ class MyUserManager(BaseUserManager):
         return self.create_user(username, password, **extra_fields)
 
 class MyUser(AbstractBaseUser, PermissionsMixin):
-    user_id = models.AutoField(primary_key=True)
+    #id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.AutoField(primary_key=True, editable=False, null= False)
     username = models.CharField(max_length=30, unique=True)
     password = models.CharField(max_length=128)
     description = models.TextField(max_length=500, blank=True)
-    profile_picture_path = models.CharField(max_length=100)
+    profile_picture = models.ForeignKey("media.Image", on_delete=models.SET_NULL, null=True)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -30,7 +33,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
 
     objects = MyUserManager()
 
-    USERNAME_FIELD = 'user_id'
+    USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['password', 'username']
 
     def __str__(self):
