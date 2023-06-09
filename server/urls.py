@@ -23,6 +23,7 @@ urlpatterns = [
     path("get_csrf/", views.get_csrf_token, name="get_csrf_token"),
     path("posts/", include("posts.urls")),
     path("users/", include("users.urls")),
+    #path("messaging/", include("messaging.urls")),
     path("requestTest/", include("requestTest.urls")),
     path("admin/", admin.site.urls),
 ]

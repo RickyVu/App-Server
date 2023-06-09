@@ -26,6 +26,9 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     description = models.TextField(max_length=500, blank=True)
     profile_picture = models.ForeignKey("media.Image", on_delete=models.SET_NULL, null=True)
 
+    follow = models.ManyToManyField('self', related_name='user_follows')
+    blacklist = models.ManyToManyField('self', related_name='user_blacklists')
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     groups = models.ManyToManyField(Group, related_name='myuser_groups')

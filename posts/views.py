@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.core.files.storage import default_storage
 from django.views.decorators.csrf import csrf_exempt
+from users.checks import session_maintain, require_login
 import json
 import m3u8
 import os
@@ -18,98 +19,9 @@ import ffmpeg_streaming
 import traceback
 
 
-def mpd(request):
-    #hls = m3u8.load("/home/RickyVu/App-Server/assets/videos/output.m3u8")
-    #return HttpResponse(hls)
-    """
-    m3u8_path = '/home/RickyVu/App-Server/assets/videos/output.m3u8'
-    file_size = os.path.getsize(m3u8_path)
-    with open(m3u8_path, 'rb') as f:
-        response = StreamingHttpResponse(f, content_type='application/vnd.apple.mpegurl')
-        #response['Content-Length'] = file_size
-        return response"""
 
-    """from ffmpeg_streaming import Formats
-
-    path = '/home/RickyVu/App-Server/assets/videos/test1.mp4'
-    video = ffmpeg_streaming.input(path)
-
-
-    dash = video.dash(Formats.h264())
-    dash.auto_generate_representations()
-    dash.output()
-    return HttpResponse("transcoded")"""
-    mpd_path = '/home/RickyVu/App-Server/assets/videos/test1.mpd'
-    with open(mpd_path, 'rb') as f:
-        response = HttpResponse(f, content_type='application/dash+xml')
-        response['Content-Length'] = os.path.getsize(mpd_path)
-        return response
-
-def segment(request, segment_name):
-    segment_path = '/home/RickyVu/App-Server/assets/videos/' + segment_name
-    with open(segment_path, 'rb') as f:
-        response = HttpResponse(f.read(), content_type='video/mp4')
-        response['Content-Length'] = os.path.getsize(segment_path)
-        return response
-
-@login_required
-def test(request):
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        text = request.POST.get('text')
-        image_data = request.FILES.get('image')
-        video_data = request.FILES.get('video')
-
-
-        # Do something with the uploaded files
-        if title:
-            pass
-        if text:
-            # Handle the text file
-            pass
-        if image_data:
-            # Handle the image file
-            # Initiate an Image model
-            # Need to save first, then auto increment value will be generated
-            image_model = Image()
-            image_model.upload_user = request.user
-            image_model.save()
-
-            #image_path = settings.STATIC_URL+"images/"+image_model.get_file_name()
-            image_path = os.path.join(settings.BASE_DIR, "assets", "images", image_model.get_file_name())
-
-
-            # Open the image data as an image object
-            image = Img.open(image_data)
-
-            """# Save the image in JPEG format with a quality of 90
-            buffer = BytesIO()
-            image.save(buffer, 'JPEG', quality=90)
-
-            # Get the buffered value and write it to a file
-            image_file = open(image_path, 'wb')
-            image_file.write(buffer.getvalue())
-            image_file.close()"""
-
-
-            # Save the image to a file
-            image.save(image_path, 'JPEG', quality=70)
-
-        if video_data:
-            video_path = os.path.join(settings.BASE_DIR, "assets", "videos", video_data.name)
-            # Save the uploaded file to disk
-            default_storage.save(video_path, video_data)
-
-
-        # Return a response
-        return JsonResponse({'success': True, 'message': 'upload successful'})
-
-    else:
-        return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
-
-
-
-@csrf_exempt
+@session_maintain
+#@csrf_exempt
 def retrieve(request):
     """
     request:
@@ -148,7 +60,7 @@ def retrieve(request):
                     elif filter_by=="text":
                         filtered|= models.PostContent.objects.filter(title__icontains=key_word) | models.PostContent.objects.filter(text_content__icontains=key_word)
                     elif filter_by=="location":
-                        filtered|= models.PostContent.objects.filter(post_location__icontains=key_word)
+                        filtered|= models.PostContent.objects.filter(pub_location__icontains=key_word)
                     elif filter_by=="tags":
                         filtered |= models.PostContent.objects.filter(tags__tag_name=key_word)
             else:
@@ -206,7 +118,7 @@ def retrieve(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def post(request):
     """
     poster = models.OneToOneField(MyUser, on_delete=models.CASCADE)
@@ -230,8 +142,15 @@ def post(request):
             title = request.POST.get('title')
             post.title = title
 
+            post.save()
+
             text_content = request.POST.get('text_content')
             post.text_content = text_content
+
+            post.save()
+
+            pub_location = request.POST.get('location')
+            post.pub_location = pub_location
 
             post.save()
 
@@ -261,6 +180,9 @@ def post(request):
                     video_model = Video()
                     video_model.save()
 
+                    video_path = video_model.get_full_path()
+
+                    default_storage.save(video_path, video_data)
                     post.videos.add(video_model)
                     post.save()
 
@@ -275,7 +197,7 @@ def post(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def like(request):
     if request.method == 'POST':
         try:
@@ -298,7 +220,7 @@ def like(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def favourite(request):
     if request.method == 'POST':
         try:

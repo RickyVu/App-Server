@@ -1,21 +1,20 @@
-import os
-import uuid
-from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user
-from django.middleware import csrf
-from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
-from django.db.utils import IntegrityError
-from django.core.cache import cache
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework import serializers
-from serializers import ImageSerializer
-from PIL import Image as Img
-from media.models import Image
-from io import BytesIO
 from . import models
 import json
+from django.contrib.auth import authenticate, login, logout
+from django.http import JsonResponse, HttpResponseRedirect
+from django.db.utils import IntegrityError
+from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
+from media.models import Image
+from users.checks import session_maintain, require_login
 
+@session_maintain
+def is_logged_in(request):
+    if request.user.is_authenticated:
+        return JsonResponse({'success': True, 'message': 'logged in'})
+    return JsonResponse({'success': False, 'message': 'not logged in'})
+
+@session_maintain
 def log_in(request):
     if request.method == 'POST':
         # Get the username and password from the request
@@ -33,7 +32,8 @@ def log_in(request):
                 login(request, user)
                 #csrf_token = csrf.get_token(request)
                 #request.session['csrf_token'] = csrf_token
-                return JsonResponse({'success': True, 'message': 'login successful'})
+                user_id = user.id
+                return JsonResponse({'success': True, 'message': {"id": user_id}})
             else:
                 # Handle invalid login credentials
                 return JsonResponse({'success': False, 'message': 'invalid login credentials'})
@@ -42,6 +42,7 @@ def log_in(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
+@session_maintain
 def signup(request):
     if request.method == 'POST':
         # Get the username and password from the request
@@ -66,11 +67,12 @@ def signup(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def log_out(request):
     logout(request)
     return JsonResponse({'message': 'logout successful'})
 
+@session_maintain
 def check_username_available(request):
     if request.method == 'POST':
 
@@ -90,7 +92,7 @@ def check_username_available(request):
     else:
         return JsonResponse({'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def description(request):
     if request.method == 'GET':
         return JsonResponse({'description':request.user.description})
@@ -110,6 +112,7 @@ def description(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
+@session_maintain
 def profile_picture(request):
     if request.method == 'GET':
         user_id = request.GET.get('id')
@@ -123,6 +126,7 @@ def profile_picture(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
+@session_maintain
 def find_users(request):
     if request.method == "GET":
         part_username = request.GET.get("username")
@@ -135,7 +139,21 @@ def find_users(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@session_maintain
+def username(request):
+    if request.method == "GET":
+        user_id = request.GET.get('id')
+        if user_id:
+            user = models.MyUser.objects.get(id=int(user_id))
+        else:
+            user = request.user
+        #image_path = os.path.join(settings.BASE_DIR, "assets", "images", user.profile_picture.get_url())
+        username = user.username
+        return JsonResponse({'success': True, 'message': {"username": username}})
+    else:
+        return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
+
+@require_login
 def change_username(request):
     if request.method == "POST":
         try:
@@ -155,7 +173,7 @@ def change_username(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def change_password(request):
     if request.method == "POST":
         try:
@@ -184,7 +202,7 @@ def change_password(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def change_description(request):
     if request.method == "POST":
         try:
@@ -200,22 +218,22 @@ def change_description(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status = 405)
 
-@login_required
+@require_login
 def change_profile_picture(request):
     if request.method == "POST":
         try:
             user = request.user
             new_profile_picture_data = request.FILES.get('image')
 
-            image_model = Image()
-            image_model.save()
+            image_model = Image.objects.create()
             user.profile_picture = image_model
             user.save()
 
-            image_path = os.path.join(settings.BASE_DIR, "assets", "images", image_model.get_file_name())
-            image = Img.open(new_profile_picture_data)
+            image_path = image_model.get_full_path()
+            #image = Img.open(new_profile_picture_data)
 
-            image.save(image_path, 'JPEG', quality=70)
+            #image.save(image_path, 'JPEG', quality=70)
+            default_storage.save(image_path, new_profile_picture_data)
 
 
             return JsonResponse({'success': True, 'message': 'change profile picture successful', "Image ID:": image_model.id})

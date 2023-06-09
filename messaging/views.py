@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from . import models
 from users.models import MyUser
 from django.db.models import Q
+from users.checks import session_maintain, require_login
 from pushy import PushyAPI
 import json
 
@@ -16,13 +17,13 @@ def get_message_thread(user1, user2):
         message_thread = None
     return message_thread
 
-@login_required
+@require_login
 def send(request):
     """
     request:
-    receiver
-    type
-    message
+    receiver: username
+    type: 'string'
+    message: string
 
 
     """
@@ -56,7 +57,7 @@ def send(request):
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
-@login_required
+@require_login
 def retrieve(request):
     if request.method == 'GET':
         message_id = request.GET.get('id')
@@ -82,7 +83,7 @@ def retrieve(request):
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
 
-@login_required
+@require_login
 def delete(request):
     if request.method == "DELETE":
         data = json.loads(request.body)
@@ -96,7 +97,7 @@ def delete(request):
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
 
-@login_required
+@require_login
 def device(request):
     if request.method == "POST":
         data = json.loads(request.body)
