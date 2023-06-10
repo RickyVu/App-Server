@@ -6,6 +6,8 @@ from django.db.utils import IntegrityError
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from media.models import Image
+import traceback
+import uuid
 from users.checks import session_maintain, require_login
 
 @session_maintain
@@ -33,6 +35,8 @@ def log_in(request):
                 #csrf_token = csrf.get_token(request)
                 #request.session['csrf_token'] = csrf_token
                 user_id = user.id
+                user.is_active = True
+                user.save()
                 return JsonResponse({'success': True, 'message': {"id": user_id}})
             else:
                 # Handle invalid login credentials
@@ -69,6 +73,9 @@ def signup(request):
 
 @require_login
 def log_out(request):
+    user = request.user
+    user.is_active = False
+    user.save()
     logout(request)
     return JsonResponse({'message': 'logout successful'})
 
@@ -92,23 +99,16 @@ def check_username_available(request):
     else:
         return JsonResponse({'message': 'method not allowed'}, status=405)
 
-@require_login
+@session_maintain
 def description(request):
     if request.method == 'GET':
-        return JsonResponse({'description':request.user.description})
-    elif request.method == 'PATCH':
-        try:
-            # Get the JSON data from the request body
-            data = json.loads(request.body)
-
-            description = data['description']
-
+        user_id = request.GET.get('id')
+        if user_id:
+            user = models.MyUser.objects.get(id=int(user_id))
+        else:
             user = request.user
-            user.description = description
-            user.save()
-            return JsonResponse({'success': True, 'message': 'set description successful'})
-        except (json.JSONDecodeError, KeyError) as e:
-            return JsonResponse({'success':False, 'message': 'invalid request'}, status=400)
+        result = {'description':user.description}
+        return JsonResponse({'success': True, 'message': result})
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
 
@@ -223,24 +223,244 @@ def change_profile_picture(request):
     if request.method == "POST":
         try:
             user = request.user
-            new_profile_picture_data = request.FILES.get('image')
+            new_profile_picture_data = request.FILES.get("image")
 
-            image_model = Image.objects.create()
+            #image_model = Image.objects.create()
+            #user.profile_picture = image_model
+            #user.save()
+            image_model = user.profile_picture
+            image_path = image_model.get_full_path()
+            default_storage.delete(image_path)
+
+            image_model.name = image_model.generate_file_name()
+            image_model.save()
             user.profile_picture = image_model
             user.save()
 
-            image_path = image_model.get_full_path()
+            new_path = image_model.get_full_path()
             #image = Img.open(new_profile_picture_data)
 
             #image.save(image_path, 'JPEG', quality=70)
-            default_storage.save(image_path, new_profile_picture_data)
+            #default_storage.save(image_path, new_profile_picture_data)
+            with open(new_path, 'wb+') as destination:
+                for chunk in new_profile_picture_data.chunks():
+                    destination.write(chunk)
 
 
-            return JsonResponse({'success': True, 'message': 'change profile picture successful', "Image ID:": image_model.id})
+            return JsonResponse({'success': True, 'message': 'change profile picture successful', "Image ID:": image_model.id, "path": image_path})
         except (json.JSONDecodeError, KeyError):
             return JsonResponse({'success':False, 'message': 'invalid request'}, status=400)
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
+"""
+GET
+users/blacklist?id=user_id
+[{'user_id': user_id, 'username': username, 'profile_picture': url}]
+
+POST
+users/blacklist/
+request: {'id': user_id} user_id of user going into blacklist
+
+
+DELETE
+users/blacklist/
+request: {'id': user_id} user_id of user removing from blacklist
+
+"""
+@require_login
+def blacklist(request):
+    if request.method=="GET":
+        try:
+            user_id = request.GET.get("id")
+            if not user_id:
+                user = request.user
+            else:
+                user = models.MyUser.objects.get(id=user_id)
+
+            blacklist_users = user.blacklist.all()
+
+            result = [{'user_id': blacklist_user.id, 'username': blacklist_user.username, 'profile_picture': blacklist_user.profile_picture.get_url()} for blacklist_user in blacklist_users]
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': result})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+    if request.method=="POST":
+        try:
+            data = json.loads(request.body)
+
+            blacklist_user_id = data['id']
+            blacklist_user = models.MyUser.objects.get(id=blacklist_user_id)
+
+            request.user.blacklist.add(blacklist_user)
+            request.user.save()
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': 'user added to blacklist'})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+    elif request.method=="DELETE":
+        try:
+            data = json.loads(request.body)
+
+            blacklist_user_id = data['id']
+            blacklist_user = models.MyUser.objects.get(id=blacklist_user_id)
+
+            request.user.blacklist.remove(blacklist_user)
+            request.user.save()
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': 'user removed from blacklist'})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+    else:
+        return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
+
+@require_login
+def follow(request):
+    if request.method=="GET":
+        try:
+            user_id = request.GET.get("id")
+            if not user_id:
+                user = request.user
+            else:
+                user = models.MyUser.objects.get(id=user_id)
+
+            follow_users = user.follow.all()
+
+            result = [{'user_id': follow_user.id, 'username': follow_user.username, 'profile_picture': follow_user.profile_picture.get_url()} for follow_user in follow_users]
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': result})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+    if request.method=="POST":
+        try:
+            data = json.loads(request.body)
+
+            follow_user_id = data['id']
+            follow_user = models.MyUser.objects.get(id=follow_user_id)
+
+            request.user.follow.add(follow_user)
+            request.user.save()
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': 'user added to follow'})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+    elif request.method=="DELETE":
+        try:
+            data = json.loads(request.body)
+
+            follow_user_id = data['id']
+            follow_user = models.MyUser.objects.get(id=follow_user_id)
+
+            request.user.follow.remove(follow_user)
+            request.user.save()
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': 'user removed from follow'})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+    else:
+        return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
+
+@require_login
+def follower(request):
+    if request.method=="GET":
+        try:
+            user_id = request.GET.get("id")
+            if not user_id:
+                user = request.user
+            else:
+                user = models.MyUser.objects.get(id=user_id)
+
+            other_users = models.MyUser.objects.exclude(id=user.id)
+            followers = other_users.filter(follow__id=user.id)
+
+            result = [{'user_id': follower.id, 'username': follower.username, 'profile_picture': follower.profile_picture.get_url()} for follower in followers]
+
+            # Return a response
+            return JsonResponse({'success': True, 'message': result})
+        except:
+             return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+
+# How many people follow this user
+@require_login
+def follower_count(request):
+    if request.method=="GET":
+
+        user_id = request.GET.get("id")
+        if not user_id:
+            user = request.user
+        else:
+            user = models.MyUser.objects.get(id=user_id)
+
+        other_users = models.MyUser.objects.exclude(id=user.id)
+        count = other_users.filter(follow__id=user.id).count()
+
+
+        result = {"count": count}
+        # Return a response
+        return JsonResponse({'success': True, 'message': result})
+
+        return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+
+# How many people this user follows
+@require_login
+def follow_count(request):
+    if request.method=="GET":
+
+        user_id = request.GET.get("id")
+        if not user_id:
+            user = request.user
+        else:
+            user = models.MyUser.objects.get(id=user_id)
+
+        result = {"count": user.follow.count()}
+        # Return a response
+        return JsonResponse({'success': True, 'message': result})
+
+        return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+
+@require_login
+def is_following(request):
+    if request.method=="GET":
+
+        target_user_id = request.GET.get("id")
+        if not target_user_id:
+            return JsonResponse({'success': False, 'message': 'require supply id'})
+
+        target_user = models.MyUser.objects.get(id=target_user_id)
+        user = request.user
+        result = {"yes":False}
+        if target_user in user.follow.all():
+            result["yes"] = True
+
+        # Return a response
+        return JsonResponse({'success': True, 'message': result})
+    else:
+        return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+
+@require_login
+def is_blacklisted(request):
+    if request.method=="GET":
+
+        target_user_id = request.GET.get("id")
+        if not target_user_id:
+            return JsonResponse({'success': False, 'message': 'require supply id'})
+
+        target_user = models.MyUser.objects.get(id=target_user_id)
+        user = request.user
+        result = {"yes":False}
+        if target_user in user.blacklist.all():
+            result["yes"] = True
+
+        # Return a response
+        return JsonResponse({'success': True, 'message': result})
+    else:
+        return JsonResponse({'success': False, 'message': 'ERROR: '+traceback.format_exc()}, status=400)
+
 # ______________________TESTS_______________________
 def getall(request):
     if (len(list(models.MyUser.objects.all().values())))==0:

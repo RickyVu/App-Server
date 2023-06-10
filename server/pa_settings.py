@@ -29,6 +29,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'rickyvu.pythonanywhere.com']
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+FILE_UPLOAD_TIMEOUT = 600 #10 minutes
 
 # Application definition
 
@@ -138,11 +141,14 @@ AUTHENTICATION_BACKENDS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+#TIME_ZONE = "UTC"
+TIME_ZONE = 'Etc/GMT+8'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_L10N = True
+
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)

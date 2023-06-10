@@ -3,53 +3,90 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from . import models
 from users.models import MyUser
-from django.db.models import Q
 from users.checks import session_maintain, require_login
 from pushy import PushyAPI
+from django.db.models import Q
 import json
 
 # Create your views here.
 
+'''
 def get_message_thread(user1, user2):
     try:
         message_thread = models.MessageThread.objects.get(Q(user1=user1, user2=user2) | Q(user1=user2, user2=user1))
     except models.MessageThread.DoesNotExist:
         message_thread = None
     return message_thread
-
+'''
 @require_login
 def send(request):
     """
     request:
-    receiver: username
+    receiver: id
     type: 'string'
     message: string
 
 
     """
     if request.method == "POST":
+        data = json.loads(request.body)
         sender = request.user
-        receiver = MyUser.objects.get(username=request.POST["receiver"])
-        type = request.POST["type"]
-        message = request.POST["message"]
+        receiver = MyUser.objects.get(id=int(data["receiver"]))
+        type = data["type"]
+        message = data["message"]
 
         if receiver and type and message:
-            message_thread = get_message_thread(sender, receiver)
+            '''
+            message_thread = models.MessageThread.get_message_thread(sender, receiver)
             if message_thread is None:
                 message_thread = models.MessageThread(user1=sender, user2=receiver)
             new_message = models.Message(sender=sender, type=type, message=message)
             message_thread.messages.add(new_message)
+            '''
 
+            new_message = models.Message(sender=sender, type=type, message=message)
+
+            message_thread = models.MessageThread.get_message_thread(sender, receiver)
 
             # Payload data you want to send to devices
-            data = {'id': new_message.id, 'message': message, 'type':type, 'sender': sender.username}
+            data = {'id': str(new_message.id), 'message': message, 'type':type, 'sender': sender.username, "sender_id": sender.id}
 
-            device_tokens = models.DeviceToken.objects.filter(user=receiver)
-            for token in device_tokens:
+            # Find all active devices of user
+            active_device_token_models = models.DeviceToken.objects.filter(user=receiver, is_active=True)
+
+            # if no active devices then we save it for later
+            if active_device_token_models.count()==0:
+                new_message.save()
+                message_thread.messages.add(new_message)
+                message_thread.save()
+                return JsonResponse({'success': True, 'message': 'message stored'})
+
+
+            # have active devices, send using pushy
+            for active_device_token_model in active_device_token_models:
+                messages = ""
                 # Send the push notification with Pushy
-                PushyAPI.sendPushNotification(data, token)
+                messages+="|"+PushyAPI.sendPushNotification(data, active_device_token_model.token)
+            return JsonResponse({'success': True, 'message': 'message sent'+messages+str(models.DeviceToken.objects.all())})
 
-            return JsonResponse({'success': True, 'message': 'message sent'})
+            '''
+            # Check if receiver is logged in
+            if receiver.is_active:
+                device_tokens = models.DeviceToken.objects.filter(user=receiver)
+                messages = ""
+                for token in device_tokens:
+                    # Send the push notification with Pushy
+                    messages+="|"+PushyAPI.sendPushNotification(data, token.token)
+                return JsonResponse({'success': True, 'message': 'message sent'+messages+str(models.DeviceToken.objects.all())})
+            else:
+                #new_message = models.Message(sender=sender, type=type, message=message)
+                new_message.save()
+                message_thread.messages.add(new_message)
+                message_thread.save()
+                return JsonResponse({'success': True, 'message': 'message stored'+messages+str()})
+            '''
+
+
         else:
             # Token is not present in the URL
             return JsonResponse({'success': False, 'message': 'require receiver, type, message in supplied json'})
@@ -100,13 +137,44 @@ def delete(request):
 @require_login
 def device(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        device_token = data['token']
+        #for t in models.DeviceToken.objects.all():
+        #    t.delete()
+        try:
+            data = json.loads(request.body)
+            device_token = data["token"]
 
-        if device_token:
-            # Token is present in the URL
-            models.DeviceToken(user=request.user, token=device_token)
-            return JsonResponse({'success': True, 'message': 'device registered'})
+
+            if device_token:
+                # Token is present in the URL
+                #token_model = models.DeviceToken.objects.get(user=request.user, token=device_token)
+                #if not token_model:
+                #    token_model = models.DeviceToken(user=request.user, token=device_token)
+
+                token_model,created = models.DeviceToken.objects.get_or_create(user=request.user, token=device_token)
+                if created:
+                    token_model.save()
+                token_model.is_active = True
+                token_model.save()
+
+
+                # Receive messages that are sent when user was logged out
+                user = request.user
+
+                query = Q(user1__exact=user) | Q(user2__exact=user)
+                #message_threads = models.MessageThread.objects.filter(query)
+                message_threads = models.MessageThread.objects.filter(query).exclude(messages__sender=user)
+                for message_thread in message_threads:
+                    for message in message_thread.messages.all():
+                        data = {'id': str(message.id), 'message': message.message, 'type':message.type, 'sender': message.sender.username, "sender_id": message.sender.id}
+                        PushyAPI.sendPushNotification(data, token_model.token)
+                        message.delete()
+
+
+
+                return JsonResponse({'success': True, 'message': 'device registered'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+
         else:
             # Token is not present in the URL
             return JsonResponse({'success': False, 'message': 'did not supply token'})
@@ -116,8 +184,10 @@ def device(request):
 
         device_token = models.DeviceToken.objects.get(token=device_token_string, user=request.user)
         if device_token:
-            device_token.delete()
-            return JsonResponse({'success':True, 'message': 'device token deleted'})
+            device_token.is_active = False
+            device_token.save()
+            #device_token.delete()
+            return JsonResponse({'success':True, 'message': 'device token inactivated'})
         else:
             #not found
             return JsonResponse({'success': False, 'message': 'token not found'})
@@ -125,3 +195,12 @@ def device(request):
 
     else:
         return JsonResponse({'success': False, 'message': 'method not allowed'}, status=405)
+
+def getall(request):
+    if (len(list(models.DeviceToken.objects.all().values())))==0:
+        return JsonResponse({"EMPTY": "NULL"})
+    else:
+        result = dict()
+        for obj, values in zip(models.DeviceToken.objects.all(), models.DeviceToken.objects.all().values()):
+            result[str(obj)] = values
+        return JsonResponse(result)

@@ -19,11 +19,20 @@ class Tag(models.Model):
     def __str__(self):
         return f"TAG:{self.tag_name}"
 
+class Comments(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    text_content = models.TextField(default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
 class PostContent(models.Model):
     poster = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=100, default="")
     text_content = models.TextField(default="")
+    text_type = models.CharField(max_length=100, default="string")
     pub_date = models.DateTimeField(auto_now_add = True)
     pub_location = models.CharField(max_length=100, null=True)
     images = models.ManyToManyField(Image, related_name="postcontents")
@@ -31,6 +40,7 @@ class PostContent(models.Model):
     tags = models.ManyToManyField(Tag)
     like_users = models.ManyToManyField(MyUser, related_name="liked_posts")
     favourite_users = models.ManyToManyField(MyUser, related_name="favourited_posts")
+    comments = models.ManyToManyField(Comments, related_name="post_comments")
 
     def __str__(self):
         return f"{self.id}:{self.title}"
