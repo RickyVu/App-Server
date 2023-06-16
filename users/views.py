@@ -6,8 +6,11 @@ from django.db.utils import IntegrityError
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from media.models import Image
+from django.conf import settings
 import traceback
+
 import uuid
+import pytz
 from users.checks import session_maintain, require_login
 
 @session_maintain
@@ -485,7 +488,12 @@ def session_test(request):
     else:
         return JsonResponse({'logged_in':False, 'csrf_token': csrf_token, 'session_key': request.session.session_key, 'message': 'not authenticated'})
 
-@login_required
+
 def req_login(request):
-    username = request.user.username
-    return JsonResponse({"username": username})
+    a = models.MyUser.objects.get(id=1)
+    my_datetime = a.last_login
+    if my_datetime.tzinfo:
+        timezone_name = my_datetime.strftime('%Z')
+    else:
+        timezone_name = pytz.timezone(settings.TIME_ZONE).zone
+    return JsonResponse({"username": timezone_name})

@@ -10,7 +10,7 @@ from pushy import PushyAPI
 class Message(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sender = models.ForeignKey("users.MyUser", on_delete=models.CASCADE)
-    time = models.DateField(auto_now = True)
+    time = models.DateTimeField(auto_now = True)
     type = models.TextField()
     message = models.TextField()
 

@@ -18,6 +18,7 @@ import io
 import shutil
 import ffmpeg_streaming
 import traceback
+import pytz
 
 
 @csrf_exempt
@@ -119,6 +120,8 @@ def retrieve(request):
 
             count = len(sliced)
 
+            hong_kong_tz = pytz.timezone('Asia/Hong_Kong')
+
             json_result = [{"user": post.poster.username,
                             "user_id": post.poster.id,
                             "title": post.title,
@@ -128,7 +131,7 @@ def retrieve(request):
                             "images": post.get_images_url(),
                             "videos": post.get_videos_url(),
                             "tags": post.get_tag_names(),
-                            "pub_date": post.pub_date,
+                            "pub_date": post.pub_date.replace(tzinfo=pytz.UTC).astimezone(hong_kong_tz),
                             "pub_location": post.pub_location,
                             "likes": post.get_like_count(),
                             "favourites": post.get_favourite_count(),
@@ -212,6 +215,7 @@ def post(request):
                 if image_data:
                     # Initiate an Image model, save so that primary key will be auto generated
                     image_model = Image()
+                    image_model.name = image_model.generate_file_name()
                     image_model.save()
 
                     image_path = image_model.get_full_path()
@@ -326,7 +330,12 @@ def comment(request):
 
             comments = post.comments.all()
 
-            result = [{"id": comment.user.id, "username": comment.user.username, "text": comment.text_content, "time": comment.created_at} for comment in comments]
+            hong_kong_tz = pytz.timezone('Asia/Hong_Kong')
+
+            result = [{"id": comment.user.id,
+                       "username": comment.user.username,
+                       "text": comment.text_content,
+                       "time": comment.created_at.replace(tzinfo=pytz.UTC).astimezone(hong_kong_tz)} for comment in comments]
 
             # Return a response
             return JsonResponse({'success': True, 'message': result, 'size': comments.count()})

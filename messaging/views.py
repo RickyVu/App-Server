@@ -6,6 +6,8 @@ from users.models import MyUser
 from users.checks import session_maintain, require_login
 from pushy import PushyAPI
 from django.db.models import Q
+from datetime import datetime
+import pytz
 import json
 
 # Create your views here.
@@ -48,8 +50,10 @@ def send(request):
 
             message_thread = models.MessageThread.get_message_thread(sender, receiver)
 
+            hong_kong_tz = pytz.timezone('Asia/Hong_Kong')
+
             # Payload data you want to send to devices
-            data = {'id': str(new_message.id), 'message': message, 'type':type, 'sender': sender.username, "sender_id": sender.id}
+            data = {'id': str(new_message.id), 'message': message, 'type':type, 'sender': sender.username, "sender_id": sender.id, "time": str(datetime.now(hong_kong_tz))}
 
             # Find all active devices of user
             active_device_token_models = models.DeviceToken.objects.filter(user=receiver, is_active=True)
@@ -159,13 +163,19 @@ def device(request):
 
                 # Receive messages that are sent when user was logged out
                 user = request.user
+                hong_kong_tz = pytz.timezone('Asia/Hong_Kong')
 
                 query = Q(user1__exact=user) | Q(user2__exact=user)
                 #message_threads = models.MessageThread.objects.filter(query)
                 message_threads = models.MessageThread.objects.filter(query).exclude(messages__sender=user)
                 for message_thread in message_threads:
                     for message in message_thread.messages.all():
-                        data = {'id': str(message.id), 'message': message.message, 'type':message.type, 'sender': message.sender.username, "sender_id": message.sender.id}
+                        data = {'id': str(message.id),
+                                'message': message.message,
+                                'type':message.type,
+                                'sender': message.sender.username,
+                                "sender_id": message.sender.id,
+                                "time": str(message.time.astimezone(hong_kong_tz))}
                         PushyAPI.sendPushNotification(data, token_model.token)
                         message.delete()
 
